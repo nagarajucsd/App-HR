@@ -1,0 +1,41 @@
+services:
+  # Backend API Service
+  - type: web
+    name: hr-management-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: FRONTEND_URL
+        value: https://hrapp.onrender.com
+      - key: MONGODB_URI
+        value: mongodb+srv://hr_admin:hrpassword123@cluster0.w5ypk0z.mongodb.net/hr-management?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 30d
+      - key: MFA_ISSUER
+        value: HR Management System
+    healthCheckPath: /api/health
+
+  # Frontend Service
+  - type: web
+    name: hr-management-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://hr-management-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
