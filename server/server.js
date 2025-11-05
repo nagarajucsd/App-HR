@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/database.js';
 
 // Import routes
@@ -23,25 +24,42 @@ import { scheduleDailyAttendanceJob } from './jobs/dailyAttendanceJob.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to database
+// Connect to MongoDB
 connectDB();
 
 const app = express();
 
-// Middleware
+// --- CORS Configuration ---
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://hrapp.onrender.com', // fallback backend if used
+  'https://app-hr-frontend.vercel.app', // 👈 your Vercel frontend (replace with actual)
+];
+
+// Allow cross-origin cookies (auth/session)
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:3001',
-    'http://localhost:3000',
-    'https://hrapp.onrender.com'
-  ],
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Required when using secure cookies behind a proxy (like Render)
+app.set('trust proxy', 1);
+
+// --- Middleware ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Routes
+// --- Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -55,24 +73,25 @@ app.use('/api/info', apiInfoRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/daily-attendance', dailyAttendanceRoutes);
 
-// Health check endpoint
+// --- Health check endpoint ---
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'HR Management API is running' });
 });
 
-// Error handling middleware
+// --- Error handler ---
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('❌ Error:', err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
 const PORT = process.env.PORT || 5000;
 
+// --- Start Server ---
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
-  
-  // Start daily attendance job scheduler
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // Start cron job
   scheduleDailyAttendanceJob();
   console.log('✅ Daily attendance job scheduler started');
 });
