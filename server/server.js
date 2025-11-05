@@ -34,14 +34,12 @@ const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://hrapp.onrender.com', // fallback backend if used
-  'https://app-hr-frontend.vercel.app', // 👈 your Vercel frontend (replace with actual)
+  'https://hrapp.onrender.com',
+  'https://app-hr-nine.vercel.app',  // ✅ your actual frontend
 ];
 
-// Allow cross-origin cookies (auth/session)
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS blocked for origin: ${origin}`));
@@ -50,6 +48,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 
 // Required when using secure cookies behind a proxy (like Render)
 app.set('trust proxy', 1);
